@@ -315,8 +315,8 @@ async def scrape_tech_news(args: Dict[str, Any], input_data: Any = None) -> List
                     
                     import re
                     description = re.sub(r'<[^>]+>', '', description)
-                    if len(description) > 300:
-                        description = description[:300] + "..."
+                    if len(description) > 1000:
+                        description = description[:1000] + "..."
 
                     articles.append({
                         "title": title,
