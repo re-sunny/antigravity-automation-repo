@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+
+# Credentials & Configurations (CRITICAL SECURITY)
+.env
+
+# SQLite Local Database
+*.db
+*.db-journal
+*.sqlite3
+
+# Project Outputs / Local Reports
+outputs/
+*.webp
+*.png

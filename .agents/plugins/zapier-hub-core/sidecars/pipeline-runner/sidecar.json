@@ -1,0 +1,11 @@
+{
+    "description": "5분마다 뉴스 피드를 수집하고 보고서를 작성해 이메일로 전송하는 안티그래비티 스케줄 작업입니다.",
+    "builtin": "schedule",
+    "args": [
+        "*/5 * * * *",
+        "../../../../../venv/Scripts/python.exe",
+        "../../../../../run_pipeline.py",
+        "1"
+    ],
+    "restart_policy": "always"
+}
