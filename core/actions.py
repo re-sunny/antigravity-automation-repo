@@ -393,6 +393,46 @@ async def save_to_supabase(args: Dict[str, Any], input_data: Any = None) -> Dict
         raise RuntimeError(error_msg)
 
 
+def format_korean_date(date_str: str) -> str:
+    if not date_str:
+        return "발행일 알 수 없음"
+    
+    from datetime import datetime
+    import email.utils
+    
+    dt = None
+    # 1. RSS RFC 822 format (e.g. Sat, 18 Jul 2026 19:30:23 +0000)
+    try:
+        dt = email.utils.parsedate_to_datetime(date_str)
+    except Exception:
+        pass
+        
+    # 2. Atom ISO 8601 format (e.g. 2026-07-19T15:03:07+09:00)
+    if dt is None:
+        try:
+            cleaned_str = date_str
+            if cleaned_str.endswith('Z'):
+                cleaned_str = cleaned_str[:-1] + '+00:00'
+            dt = datetime.fromisoformat(cleaned_str)
+        except Exception:
+            pass
+
+    if dt is None:
+        return date_str
+
+    try:
+        # 시간대 필드를 바꾸지 않고 들어온 본 캘린더 데이터를 기준으로 표시
+        ampm = "오전" if dt.hour < 12 else "오후"
+        hour_12 = dt.hour if dt.hour <= 12 else dt.hour - 12
+        if hour_12 == 0:
+            hour_12 = 12
+            
+        return f"{dt.year}년 {dt.month}월 {dt.day}일 {ampm} {hour_12}시 {dt.minute}분"
+    except Exception as e:
+        print(f"발행일 포맷팅 가공 실패: {e}")
+        return date_str
+
+
 async def send_gmail(args: Dict[str, Any], input_data: Any = None) -> Dict[str, Any]:
     """
     수집 및 저장 완료된 최신 뉴스 헤드라인들을 이메일 (Gmail SMTP)로 전송합니다.
@@ -442,7 +482,7 @@ async def send_gmail(args: Dict[str, Any], input_data: Any = None) -> Dict[str, 
                             {source_badge}
                             <a href="{art.get('link')}" target="_blank" style="font-size: 1.05rem; font-weight: bold; color: #1E293B; text-decoration: none; margin-left: 0.5rem;">{art.get('title')}</a>
                         </div>
-                        <div style="font-size: 0.85rem; color: #64748B; margin-bottom: 0.5rem;">발행: {art.get('published_at')}</div>
+                        <div style="font-size: 0.85rem; color: #64748B; margin-bottom: 0.5rem;">발행: {format_korean_date(art.get('published_at'))}</div>
                         <p style="font-size: 0.9rem; color: #475569; margin: 0;">{art.get('description')}</p>
                     </td>
                 </tr>
