@@ -309,14 +309,39 @@ async def scrape_tech_news(args: Dict[str, Any], input_data: Any = None) -> List
                         pub_date = item.findtext("pubDate", "").strip()
                         description = item.findtext("description", "").strip()
                     
+                    # GeekNews 상세 정보 본문 전체 크롤링 (피드는 말줄임표로 잘리기 때문)
+                    if name == "GeekNews" and link and "news.hada.io/topic?id=" in link:
+                        try:
+                            detail_response = await client.get(link, timeout=5.0)
+                            if detail_response.status_code == 200:
+                                detail_html = detail_response.text
+                                match_desc = re.search(r"<div id=['\"]topic_contents['\"]>(.*?)</div>", detail_html, re.DOTALL)
+                                
+                                if match_desc:
+                                    raw_description = match_desc.group(1)
+                                    import html
+                                    formatted = re.sub(r'<li>', '• ', raw_description)
+                                    formatted = re.sub(r'</(li|h[1-6]|p)>', '\n', formatted)
+                                    formatted = re.sub(r'<br\s*/?>', '\n', formatted)
+                                    formatted = re.sub(r'<[^>]+>', '', formatted)
+                                    formatted = html.unescape(formatted)
+                                    formatted = re.sub(r'\n+', '\n', formatted).strip()
+                                    if formatted:
+                                        description = formatted
+                        except Exception as e_detail:
+                            print(f"[GeekNews] {link} 상세 본문 크롤링 중 오류 발생: {e_detail}")
+
                     # 간단한 HTML 태그 정리 (description 대상)
                     if description.startswith("<![CDATA["):
                         description = description.replace("<![CDATA[", "").replace("]]>", "")
                     
                     import re
                     description = re.sub(r'<[^>]+>', '', description)
-                    if len(description) > 1000:
-                        description = description[:1000] + "..."
+                    
+                    # GeekNews는 상세 요약이 길 수 있으므로 5000자까지 허용
+                    max_len = 5000 if name == "GeekNews" else 1000
+                    if len(description) > max_len:
+                        description = description[:max_len] + "..."
 
                     articles.append({
                         "title": title,

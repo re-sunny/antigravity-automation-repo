@@ -422,3 +422,98 @@ def get_execution(execution_id: str, db: Session = Depends(get_db)):
         "step_logs": step_logs
     }
 
+
+@app.get("/api/news")
+async def get_news():
+    """
+    Supabase DB에 수집되어 저장 완료된 최신 테크 뉴스 기사 목록을 정렬하여 가져옵니다.
+    """
+    import httpx
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    if not supabase_url or not supabase_key:
+        raise HTTPException(status_code=500, detail="Supabase 설정(SUPABASE_URL, SUPABASE_KEY)이 .env 파일에 구성되어 있지 않습니다.")
+
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}"
+    }
+    # 최신 수집된 순서대로 정렬하여 200개 제한으로 로드합니다.
+    url = f"{supabase_url}/rest/v1/collected_news?order=created_at.desc&limit=200"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Supabase DB 조회 중 오류 발생: {str(e)}")
+
+
+class SummarizeRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/news/summarize")
+async def summarize_news(payload: SummarizeRequest):
+    """
+    기사의 상세 본문을 형태소 가중치 및 문장 위치기반 Extractive TextRank 알고리즘을 이용해 중요 문장 3개로 요약합니다.
+    """
+    text = payload.text.strip()
+    if not text:
+        return {"summary": []}
+
+    import re
+    # 문장 단위로 분할 (주요 문장 종결 기호 및 줄바꿈 기준)
+    raw_sentences = re.split(r'(?<=[.!?])\s+|\n', text)
+    sentences = [s.strip() for s in raw_sentences if len(s.strip()) > 15]
+
+    if len(sentences) <= 3:
+        return {"summary": sentences}
+
+    # 형태소 가중치 점수를 위한 빈도 계산 (간단한 공백/단어 파싱)
+    word_freq = {}
+    stopwords = {"이", "그", "저", "은", "는", "을", "를", "에", "의", "와", "과", "도", "로", "으로", "에서", 
+                 "해서", "그리고", "하지만", "합니다", "하는", "할", "한", "있습니다", "있는", "두", "세",
+                 "the", "a", "of", "and", "in", "to", "for", "with", "is", "on"}
+
+    for sentence in sentences:
+        words = re.findall(r'[가-힣\w]+', sentence.lower())
+        for word in words:
+            if len(word) > 1 and word not in stopwords:
+                word_freq[word] = word_freq.get(word, 0) + 1
+
+    max_freq = max(word_freq.values()) if word_freq else 1
+    for word in word_freq:
+        word_freq[word] /= max_freq
+
+    # 문장별 중요도 점수 연산
+    sentence_scores = {}
+    for i, sentence in enumerate(sentences):
+        words = re.findall(r'[가-힣\w]+', sentence.lower())
+        score = 0
+        unique_words = set(words)
+        for word in unique_words:
+            if word in word_freq:
+                score += word_freq[word]
+
+        # 단어 개수에 따른 패널티/부스트 보정 (너무 짧거나 길면 감점)
+        length = len(words)
+        if length < 5 or length > 40:
+            score *= 0.5
+
+        # 위치 보정 (첫 문장과 마지막 문장에 대한 가산점)
+        if i == 0:
+            score *= 1.3
+        elif i == len(sentences) - 1:
+            score *= 1.15
+
+        sentence_scores[i] = score
+
+    # 점수 높은 상위 3개 인덱스 추출 후 원문 문장 순서로 정렬
+    top_indices = sorted(sentence_scores.keys(), key=lambda x: sentence_scores[x], reverse=True)[:3]
+    top_indices.sort()
+
+    return {"summary": [sentences[idx] for idx in top_indices]}
+
+
+

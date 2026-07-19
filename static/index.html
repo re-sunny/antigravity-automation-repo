@@ -4,8 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>재피어 허브 - 로컬 자동화 엔진</title>
+    <title>Tech Trends - 개인 테크 뉴스 리더 & 인사이트</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- Chart.js CDN for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -13,184 +15,152 @@
     <!-- 헤더 내비게이션 바 -->
     <header>
         <div class="header-container">
-            <div class="logo">
-                <div class="logo-icon">⚡</div>
-                <span>재피어 허브</span>
+            <div style="display: flex; flex-direction: column;">
+                <div class="logo">
+                    <div class="logo-icon">⚡</div>
+                    <span>TECH TRENDS</span>
+                </div>
+                <div class="logo-sub">나만의 개별 IT/테크 뉴스 포털 & 인사이트 보드</div>
             </div>
-            <div class="header-actions">
-                <button class="btn btn-primary" id="btn-create-pipeline">
-                    <span>+</span> 파이프라인 생성
-                </button>
-            </div>
+
+            <!-- 탭 메뉴 내비게이션 -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="feed-tab">📰 뉴스 피드</button>
+                <button class="nav-tab" data-tab="bookmarks-tab">⭐ 즐겨찾기</button>
+                <button class="nav-tab" data-tab="insights-tab">📊 인사이트 분석</button>
+            </nav>
         </div>
     </header>
 
     <!-- 메인 작업 공간 영역 -->
     <main>
 
-        <!-- 통계 요약 카드 그리드 -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <span class="stat-label">전체 파이프라인</span>
-                <span class="stat-value" id="stat-total-pipelines">0</span>
+        <!-- 탭 1: 뉴스 피드 목록 -->
+        <section id="feed-tab" class="tab-content active">
+            <!-- 검색 및 필터 컨트롤 -->
+            <div class="controls-bar">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" class="search-input" placeholder="키워드로 가상/실제 기사 검색...">
+                </div>
+                <div class="filter-group">
+                    <select id="source-filter" class="filter-select">
+                        <option value="all">모든 뉴스 출처</option>
+                        <option value="GeekNews">GeekNews</option>
+                        <option value="TechCrunch">TechCrunch</option>
+                    </select>
+                    <input type="date" id="date-filter" class="filter-select" title="수집/발행 날짜별로 필터링">
+                    <span class="results-count" id="results-count">조회 결과: 0개 기사</span>
+                </div>
             </div>
-            <div class="stat-card cyan">
-                <span class="stat-label">활성 스케줄</span>
-                <span class="stat-value" id="stat-active-pipelines">0</span>
-            </div>
-            <div class="stat-card success">
-                <span class="stat-label">실행 성공</span>
-                <span class="stat-value" id="stat-success-runs">0</span>
-            </div>
-            <div class="stat-card danger">
-                <span class="stat-label">실행 실패</span>
-                <span class="stat-value" id="stat-failed-runs">0</span>
+
+            <!-- 기사 카드 그리드 목록 -->
+            <div id="loader" class="pulse-spinner" style="display: none;"></div>
+            <div id="news-grid" class="news-grid">
+                <!-- script를 통해 동적으로 로드됨 -->
             </div>
         </section>
 
-        <!-- 동적 패널 섹션 -->
-        <section class="panel-container">
-
-            <!-- 왼쪽 패널: 파이프라인 워크플로우 목록 -->
-            <div class="panel">
-                <div class="panel-header">
-                    <h2 class="panel-title">⚙️ 자동화 워크플로우</h2>
-                </div>
-                <div id="pipelines-list-container" class="pipeline-list">
-                    <!-- app.js를 통해 동적으로 로드됨 -->
-                    <div class="no-data">파이프라인을 불러오는 중...</div>
-                </div>
+        <!-- 탭 2: 북마크 목록 -->
+        <section id="bookmarks-tab" class="tab-content">
+            <div class="controls-bar">
+                <h3 style="font-family: var(--font-title); font-weight: 600;">⭐ 내 보관함</h3>
+                <span class="results-count" id="bookmarks-count">북마크: 0개</span>
             </div>
 
-            <!-- 오른쪽 패널: 실행 이력 실시간 모니터링 -->
-            <div class="panel">
-                <div class="panel-header">
-                    <h2 class="panel-title">📊 실행 모니터 대시보드</h2>
-                </div>
-                <div id="executions-list-container" class="execution-list">
-                    <!-- app.js를 통해 동적으로 로드됨 -->
-                    <div class="no-data">실행 기록을 불러오는 중...</div>
-                </div>
+            <div id="bookmarks-grid" class="news-grid">
+                <!-- 북마크된 카드가 동적으로 주입됨 -->
             </div>
-
         </section>
+
+        <!-- 탭 3: 트렌드 인사이트 -->
+        <section id="insights-tab" class="tab-content">
+            <!-- 통계 요약 카드 그리드 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">전체 수집 뉴스</span>
+                    <span class="stat-value" id="stat-total-news">0</span>
+                </div>
+                <div class="stat-card cyan">
+                    <span class="stat-label">GeekNews 기사 수</span>
+                    <span class="stat-value" id="stat-geek-news">0</span>
+                </div>
+                <div class="stat-card emerald">
+                    <span class="stat-label">TechCrunch 기사 수</span>
+                    <span class="stat-value" id="stat-tc-news">0</span>
+                </div>
+                <div class="stat-card orange">
+                    <span class="stat-label">내 소중한 북마크</span>
+                    <span class="stat-value" id="stat-bookmarks">0</span>
+                </div>
+            </div>
+
+            <!-- 시각화 차트 그리드 -->
+            <div class="charts-grid">
+                <!-- 차트 1: 요일/일자별 뉴스 수집 누적 빈도 흐름 -->
+                <div class="chart-card">
+                    <h3 class="chart-card-title">📈 최근 뉴스 정보 수집 빈도 추이</h3>
+                    <div class="chart-container-elm">
+                        <canvas id="frequencyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 차트 2: 뉴스 데이터 출처 비율 -->
+                <div class="chart-card">
+                    <h3 class="chart-card-title">🍩 수집 출처 분포 비율</h3>
+                    <div class="chart-container-elm">
+                        <canvas id="ratioChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 인사이트 3: 핫 테크 트렌드 키워드 집계 -->
+            <div class="keywords-panel">
+                <h3 class="chart-card-title">🔥 실시간 핫 테크 트렌드 키워드 (실수집 타이틀 기반형)</h3>
+                <div id="keywords-container" class="keywords-container">
+                    <!-- 스크립트로 상위 빈도 키워드 노출 예정 -->
+                </div>
+            </div>
+        </section>
+
     </main>
 
-    <!-- 모달 1: 파이프라인 생성 및 편집 빌더 -->
-    <div id="modal-builder" class="modal-backdrop">
+    <!-- 기사 상세 모달 -->
+    <div id="modal-details" class="modal-backdrop">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 class="modal-title" id="builder-modal-title">자동화 파이프라인 생성</h3>
-                <button class="modal-close" id="btn-close-builder">&times;</button>
-            </div>
-            <form id="pipeline-form">
-                <div class="modal-body">
-                    <!-- 일반 설정 내역 -->
-                    <div class="form-group">
-                        <label for="pipeline-name">파이프라인 이름</label>
-                        <input type="text" id="pipeline-name" placeholder="예: 일일 IT 뉴스 스크랩 및 공유" required>
-                    </div>
-
-                    <!-- 트리거 타입 설정 -->
-                    <div class="form-group">
-                        <label for="trigger-type">트리거 유형</label>
-                        <select id="trigger-type">
-                            <option value="manual">수동 트리거 전용</option>
-                            <option value="cron">크론 주기 설정 (정해진 시간에 반복)</option>
-                            <option value="interval">간격 타이머 설정 (초 단위 주기)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" id="trigger-val-group" style="display: none;">
-                        <label id="trigger-val-label" for="trigger-value">트리거 설정값</label>
-                        <input type="text" id="trigger-value">
-                        <span class="helper-text" id="trigger-val-helper"></span>
-                    </div>
-
-                    <!-- 파이프라인 내 단계 배치 시퀀스 -->
-                    <div class="form-group" style="margin-top: 1.5rem;">
-                        <label>파이프라인 실행 단계 설정</label>
-
-                        <!-- 단계 추가용 드롭다운 및 버튼 -->
-                        <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
-                            <select id="step-action-selector" style="flex: 1;">
-                                <option value="" disabled selected>추가할 액션을 선택하세요...</option>
-                                <option value="scrape_news_feed">scrape_news_feed (RSS 뉴스 피드 수집)</option>
-                                <option value="create_excel">create_excel (엑셀/CSV 스프레드시트 저장)</option>
-                                <option value="send_email">send_email (샌드박스 메일 전송)</option>
-                                <option value="scrape_tech_news">scrape_tech_news (종합 IT 테크 뉴스 수집)</option>
-                                <option value="save_to_supabase">save_to_supabase (Supabase DB에 뉴스 저장)</option>
-                                <option value="send_gmail">send_gmail (Gmail로 테크 리포트 전송)</option>
-                            </select>
-                            <button type="button" class="btn btn-secondary" id="btn-add-step">단계 추가</button>
-                        </div>
-
-                        <!-- 추가된 단계 목록 가시화 영역 -->
-                        <div id="builder-steps-list" class="builder-steps-container">
-                            <!-- 동적으로 생성 보강됨 -->
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-builder')">취소</button>
-                    <button type="submit" class="btn btn-primary">파이프라인 저장</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 모달 2: 세부 실행 이력 검색 및 예외 추적 감사 결과 창 -->
-    <div id="modal-details" class="modal-backdrop">
-        <div class="modal-card" style="max-width: 800px;">
-            <div class="modal-header">
                 <div>
-                    <h3 class="modal-title" id="detail-pipe-name">파이프라인 이름</h3>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-code);">실행 번호:
-                        <span id="detail-run-id">ID</span></span>
+                    <span id="detail-source-badge" class="source-badge">출처</span>
+                    <h3 class="modal-title" id="detail-title" style="margin-top: 0.5rem;">기사 제목</h3>
                 </div>
                 <button class="modal-close" id="btn-close-details">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- 메타정보 요약 개요 테이블 -->
-                <div
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <div style="display: grid; gap: 0.25rem;">
-                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">실행
-                            상태</span>
-                        <div><span id="detail-status-badge" class="status-badge success">성공</span></div>
-                    </div>
-                    <div style="display: grid; gap: 0.25rem;">
-                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">실행
-                            일시</span>
-                        <span id="detail-start-time" style="font-size: 0.85rem; font-weight: 500;">-</span>
-                    </div>
-                    <div style="display: grid; gap: 0.25rem;">
-                        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">소요
-                            시간</span>
-                        <span id="detail-duration" style="font-size: 0.85rem; font-weight: 500;">-</span>
-                    </div>
+                <div class="modal-meta-row">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">발행 시간: <span
+                            id="detail-pub-date">-</span></span>
+                    <button id="detail-bookmark-btn" class="btn-bookmark">★</button>
                 </div>
-
-                <!-- 전체 최우선 에러 알림 패널 -->
-                <div id="detail-pipeline-error-box"
-                    style="display: none; background: var(--color-danger-bg); border: 1px solid var(--color-danger); padding: 1rem; border-radius: 8px;">
-                    <span
-                        style="font-size: 0.8rem; font-weight: 600; color: var(--color-danger); display: block; margin-bottom: 0.5rem;">에러
-                        예외 발생으로 파이프라인 중단:</span>
-                    <pre id="detail-pipeline-error"
-                        style="font-family: var(--font-code); font-size: 0.8rem; white-space: pre-wrap; color: var(--text-primary); overflow-x: auto;"></pre>
-                </div>
-
-                <!-- 단계별 순차 실행 감사 흐름 정보 -->
-                <div class="form-group">
-                    <label>단계별 세부 실행 흐름 추적 (Trace)</label>
-                    <div id="detail-steps-trace-container" class="step-details-container">
-                        <!-- 동적으로 상세 추가됨 -->
-                    </div>
+                <p class="modal-desc" id="detail-desc">기사 본문 요약...</p>
+                <div id="modal-summary-section"
+                    style="display: none; margin-top: 1.5rem; padding: 1.25rem; border-radius: 12px; background: rgba(99, 99, 241, 0.08); border: 1px solid rgba(99, 99, 241, 0.25);">
+                    <h4
+                        style="margin-top: 0; margin-bottom: 0.75rem; color: #a5b4fc; font-size: 0.95rem; font-family: var(--font-title); display: flex; align-items: center; gap: 0.35rem;">
+                        <span>⚡ AI 핵심 요약</span>
+                    </h4>
+                    <ul id="modal-summary-list"
+                        style="margin: 0; padding-left: 1.2rem; font-size: 0.88rem; line-height: 1.6; color: var(--text-primary); display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- 요약 문장들이 여기에 주입됩니다 -->
+                    </ul>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('modal-details')">닫기</button>
+            <div class="modal-footer"
+                style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
+                <button class="btn-modal btn-modal-secondary" id="btn-modal-summary"
+                    style="margin-right: auto; background: rgba(99, 99, 241, 0.2); border-color: rgba(99, 99, 241, 0.4); color: #a5b4fc; transition: all 0.3s ease;">⚡
+                    AI 3줄 요약</button>
+                <button class="btn-modal btn-modal-secondary" id="btn-modal-close">닫기</button>
+                <a href="#" target="_blank" class="btn-modal btn-modal-primary" id="detail-link-btn">원문 보기 ↗</a>
             </div>
         </div>
     </div>
